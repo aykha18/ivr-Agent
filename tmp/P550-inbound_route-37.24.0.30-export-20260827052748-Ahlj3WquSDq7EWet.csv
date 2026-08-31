@@ -1,0 +1,11 @@
+﻿Name,Inbound Alert Info,DID Matching Mode,DID Pattern,Caller ID Matching Mode,Caller ID Pattern,Trunks,Default Destination,Number of Default Destination,Enable Fax Detection,Fax Destination,Number of Fax Destination
+Farsana,,patterns,214,patterns,,Qatar_gateway,extension,214,0,extension,
+Qatar,,patterns,,patterns,," Qatar-Pbx",extension,214,0,extension,
+Lamiya,,patterns,205,patterns,,ToDinstar,extension,205,0,extension,
+Shafi,,patterns,206,patterns,,ToDinstar,extension,206,0,extension,
+Reception,,patterns,200,patterns,,ToDinstar,extension,206,0,extension,
+" web-call",,patterns,,patterns,," web-call",end_call,,0,extension,
+Demo,,patterns,1000,patterns,,ToDinstar,extension,1000,0,extension,
+Lubna,,patterns,215,patterns,,ToDinstar,extension,215,0,extension,
+Test_AI,,patterns,,patterns,,,extension,208,0,extension,
+LandLine,,patterns,,patterns,," FXO1-1&FXO1-2",extension,214,0,extension,
