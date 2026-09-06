@@ -12,3 +12,7 @@ This folder contains the SDLC documents for the Enterprise MVP: a multilingual (
 - [06_delivery_plan.md](./06_delivery_plan.md): Delivery phases, review gates, and customer prerequisites
 - [07_backlog.md](./07_backlog.md): Epics/stories for implementation planning
 - [08_telephony_adapters.md](./08_telephony_adapters.md): Telephony adapter specifications and provider guides
+- [09_mvp_improvements.md](./09_mvp_improvements.md): Current improvement roadmap and implementation gaps
+- [10_installation.md](./10_installation.md): Installation and setup guide
+- [11_implementation_gaps.md](./11_implementation_gaps.md): Features not yet implemented (excluding PostgreSQL)
+- [yeastar_p550_sip_trunk_field_mapping.md](./yeastar_p550_sip_trunk_field_mapping.md): Yeastar P550 SIP trunk CSV field mapping

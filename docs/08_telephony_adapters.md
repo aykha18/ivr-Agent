@@ -46,6 +46,8 @@ type AdapterEvent = {
 
 ## 3) Built-in Adapters
 
+> Note: `exotel` and `genesys` are reserved channel names but currently resolve to null stubs in `api/services/telephony/factory.ts`. Selecting them will throw at runtime. They are not implemented in this release.
+
 ### 3.1 Simulator Adapter (Default)
 - **Transport**: HTTP + WebSocket (for real-time UI updates)
 - **Auth**: None (internal use)
@@ -75,21 +77,6 @@ type AdapterEvent = {
   - `EXOTEL_SID`
   - `EXOTEL_VOICE_WEBHOOK_URL`
 - **Implementation**: `api/services/telephony/exotel.ts`
-
-### 3.4 Yeastar Adapter
-- **Transport**: REST API + Webhooks
-- **Auth**: API Key
-- **Use case**: Yeastar PBX / cloud telephony (MyPBX, S-Series, P-Series)
-- **Config**:
-  - `YEASTAR_API_URL` (default: `http://localhost:8088`)
-  - `YEASTAR_API_KEY`
-  - `YEASTAR_WEBHOOK_URL` (public URL for webhooks)
-- **Endpoints**:
-  - `POST /api/telephony/yeastar/call` — Create session from Yeastar call
-  - `POST /api/telephony/yeastar/events` — Handle Yeastar events (DTMF, speech)
-  - `POST /api/telephony/yeastar/answer` — Mark call as answered
-  - `POST /api/telephony/yeastar/hangup` — End session on hangup
-- **Implementation**: `api/services/telephony/yeastar.ts`
 
 ### 3.4 Yeastar Adapter
 - **Transport**: REST API + Webhooks
@@ -182,6 +169,18 @@ YEASTAR_API_KEY=xxxx
 YEASTAR_WEBHOOK_URL=https://your-domain.com/api/telephony/yeastar/events
 ```
 
+### 3.6 Peer Trunk (Direct IP-to-IP)
+- **Transport**: SIP direct IP (UDP/TCP/TLS)
+- **Auth**: IP-based or credentials
+- **Use case**: Local IP-to-IP testing without a PBX
+- **Config**: Configured via Admin Dashboard UI (not env vars)
+  - Peer Name, Host/IP, Port
+  - Transport (UDP/TCP/TLS)
+  - Codecs, DTMF Mode, Qualify, Context, Insecure
+- **Implementation**: Config stored in 	elephony_config table; generates Asterisk pjsip.conf and extensions.conf snippets via Admin UI
+- **Validation**: POST /api/admin/telephony/validate checks TCP reachability to peer host:port
+- **Note**: This is a testing feature. The generated config must be manually applied to your local Asterisk instance.
+
 ## 5) Adapter Lifecycle
 1. **Startup**: Orchestrator loads adapter based on config
 2. **Session Start**: Adapter creates session, returns handle to orchestrator
@@ -195,3 +194,4 @@ YEASTAR_WEBHOOK_URL=https://your-domain.com/api/telephony/yeastar/events
   - Log the error with telemetry
   - Offer escalation or callback to the user
   - Continue operating with degraded functionality if possible
+

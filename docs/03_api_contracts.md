@@ -4,20 +4,31 @@
 Define stable internal APIs for the enterprise MVP so the simulator UI, orchestration logic, integrations, and telephony adapters can evolve independently.
 
 ## 2) Internal APIs (MVP Backend)
-### 2.1 Create Session
+Base path: `/api`
+
+### 2.1 Health Check
+- Method: GET
+- Path: /api/health
+- Response: `{ success: true, message: "ok" }`
+
+### 2.2 Create Session
 - Method: POST
 - Path: /api/sessions
 - Body:
-  - channel: "simulator" | "twilio" | "exotel" | "sip" | "genesys"
-  - metadata:
-    - caller_id (optional)
-    - adapter_data (optional, provider-specific)
+  - channel: "simulator" | "twilio" | "asterisk" | "sip" | "yeastar"
 - Response:
   - session_id
   - next_prompt (language selection prompt)
   - channel
 
-### 2.2 Set Language
+### 2.3 Get Session
+- Method: GET
+- Path: /api/sessions/{session_id}
+- Response:
+  - session object
+  - turns[]
+
+### 2.4 Set Language
 - Method: POST
 - Path: /api/sessions/{session_id}/language
 - Body:
@@ -26,7 +37,7 @@ Define stable internal APIs for the enterprise MVP so the simulator UI, orchestr
   - ok
   - next_prompt
 
-### 2.3 Send User Utterance
+### 2.5 Send User Utterance
 - Method: POST
 - Path: /api/sessions/{session_id}/turns
 - Body:
@@ -34,48 +45,43 @@ Define stable internal APIs for the enterprise MVP so the simulator UI, orchestr
   - text (if input_type="text")
   - dtmf (if input_type="dtmf")
   - audio_ref (if input_type="audio")
-  - channel: optional channel override
 - Response:
   - assistant_text
-  - assistant_audio_ref (optional)
   - events[] (tool calls summarized for demo)
   - suggested_actions[]:
     - continue_on_whatsapp (optional)
     - request_callback (optional)
 
-### 2.4 Request Callback
+### 2.6 Request Callback
 - Method: POST
 - Path: /api/sessions/{session_id}/callback
 - Body:
-  - phone (optional if known)
   - reason
+  - phone (optional)
   - preferred_time (optional)
 - Response:
   - callback_id
   - status
 
-### 2.5 Send WhatsApp
+### 2.7 Send WhatsApp
 - Method: POST
 - Path: /api/sessions/{session_id}/whatsapp
-- Body: (empty or optional context)
+- Body: (empty)
 - Response:
   - success: boolean
   - message_id (if success)
   - error (if failed)
 
-### 2.6 End Session
+### 2.8 End Session
 - Method: POST
 - Path: /api/sessions/{session_id}/end
 - Response:
   - ok: boolean
 
-### 2.7 Admin Metrics
+### 2.9 Admin Metrics
 - Method: GET
 - Path: /api/admin/metrics
-- Query params (optional):
-  - from, to
-  - language
-  - channel (telephony provider filter)
+- Auth: X-Api-Key header required if ADMIN_API_KEY is set
 - Response:
   - total_sessions
   - channel_split
@@ -87,28 +93,16 @@ Define stable internal APIs for the enterprise MVP so the simulator UI, orchestr
   - whatsapp_sent
   - top_intents
 
-### 2.8 LLM Config
+### 2.10 Admin Metrics (Prometheus)
 - Method: GET
-- Path: /api/llm
-- Response:
-  - provider: "openai" | "anthropic" | "ollama" | "mock"
-  - model: string
-  - api_url?: string
-  - api_key?: string
-  - temperature: number
-  - max_tokens: number
-  - enabled: boolean
+- Path: /api/admin/metrics/prometheus
+- Auth: X-Api-Key header required if ADMIN_API_KEY is set
+- Response: text/plain Prometheus metrics
 
-### 2.9 Update LLM Config
-- Method: POST
-- Path: /api/llm
-- Body: same as response above
-- Response:
-  - ok: boolean
-
-### 2.8 Admin Records
+### 2.11 Admin Records
 - Method: GET
 - Path: /api/admin/records
+- Auth: X-Api-Key header required if ADMIN_API_KEY is set
 - Query params (optional):
   - channel
   - limit
@@ -116,93 +110,88 @@ Define stable internal APIs for the enterprise MVP so the simulator UI, orchestr
   - sessions[]
   - tickets[]
   - callbacks[]
+  - whatsapp_messages[]
 
-## 3) Tool Contracts (Integration Layer)
-The orchestrator should call tools through an internal abstraction so tools can be mocked in MVP-1 and pointed to customer APIs later.
-
-### 3.1 Order Lookup Tool
-- Name: order_lookup
-- Input:
-  - order_number (optional)
-  - phone (optional)
-  - language
-- Output:
-  - found: boolean
-  - order:
-    - order_number
-    - status: "processing" | "shipped" | "delivered" | "unknown"
-    - carrier (optional)
-    - tracking_url (optional)
-    - eta (optional)
-    - phone (optional)
-  - error (optional)
-
-### 3.2 Create Ticket Tool
-- Name: ticket_create
-- Input:
-  - session_id
-  - language
-  - category: "delivery_issue" | "returns_refunds" | "order_tracking" | "other"
-  - subcategory (optional)
-  - description
-  - order_number (optional)
-  - phone (optional)
-- Output:
-  - ticket_id
-  - status
-  - error (optional)
-
-### 3.3 WhatsApp Send Tool (WABA)
-- Name: whatsapp_send
-- Input:
-  - phone
-  - message_type: "template" | "text"
-  - template_name (optional)
-  - parameters (optional)
-  - text (optional)
-  - context:
-    - session_id
-    - ticket_id (optional)
-    - order_number (optional)
-- Output:
-  - message_id
-  - status
-  - error (optional)
-
-## 4) Telephony Adapter Contracts
-### 4.1 Adapter Interface
-- All adapters must implement `TelephonyAdapter` from `api/services/telephony/adapter.ts`
-- Adapters are loaded dynamically based on `TELEPHONY_ADAPTER` config
-- Adapters handle provider-specific signaling and normalize to internal interface
-
-### 4.2 Adapter Events
-- `session_started` — adapter has established a session
-- `session_ended` — adapter has terminated a session
-- `input_received` — user input received via telephony
-- `output_sent` — assistant output delivered to user
-- `error` — adapter encountered an error
-
-## 5) Customer-Provided APIs (Assumed Ready)
-For MVP-1 demo, these may be stubbed. For MVP-2 they are mapped.
-
-### Orders API (Example Contract)
-- GET /orders/{order_number}
+### 2.12 LLM Config
+- Method: GET
+- Path: /api/llm
+- Auth: X-Api-Key header required if ADMIN_API_KEY is set
 - Response:
-  - order_number
-  - status
-  - tracking_url
-  - eta
+  - provider: "openai" | "anthropic" | "ollama" | "mock" | "gemini" | "groq"
+  - model: string
+  - api_url?: string
+  - api_key?: string
+  - temperature: number
+  - max_tokens: number
+  - enabled: boolean
 
-### Returns API (Example Contract)
-- POST /returns
-- GET /returns/{return_id}
+### 2.13 Update LLM Config
+- Method: POST
+- Path: /api/llm
+- Auth: X-Api-Key header required if ADMIN_API_KEY is set
+- Body: same as response above
+- Response:
+  - ok: boolean
 
-## 6) Error Handling Rules (MVP)
-- Tool failures must not lead to fabricated answers
-- Adapter failures must not crash the orchestrator
-- Orchestrator response must include:
-  - a clear statement of inability to fetch data
-  - an option to escalate or request callback
-- If a telephony adapter fails, the orchestrator should:
-  - log the error with telemetry
-  - offer escalation or callback to the user
+### 2.14 Admin Telephony Config
+- Method: GET
+- Path: /api/admin/telephony
+- Auth: X-Api-Key header required if ADMIN_API_KEY is set
+- Response: TelephonyConfig
+
+### 2.15 Update Admin Telephony Config
+- Method: POST
+- Path: /api/admin/telephony
+- Auth: X-Api-Key header required if ADMIN_API_KEY is set
+- Body: TelephonyConfig
+- Response: updated TelephonyConfig
+
+### 2.16 Validate Telephony Config
+- Method: POST
+- Path: /api/admin/telephony/validate
+- Auth: X-Api-Key header required if ADMIN_API_KEY is set
+- Body: TelephonyConfig (partial, for dry-run)
+- Response:
+  - valid: boolean
+  - provider: string
+  - message: string
+
+### 2.17 Telephony Status
+- Method: GET
+- Path: /api/admin/telephony/status
+- Auth: X-Api-Key header required if ADMIN_API_KEY is set
+- Response:
+  - provider: string
+  - connected: boolean
+  - error?: string
+  - details?: string[]
+  - channels?: array (asterisk)
+  - ari_app?: string
+  - ari_app_status?: string
+  - active_channels?: number
+
+### 2.18 Admin Audit Log
+- Method: GET
+- Path: /api/admin/audit
+- Auth: X-Api-Key header required if ADMIN_API_KEY is set
+- Query params:
+  - limit (default 100, max 500)
+- Response:
+  - logs[]
+
+## 3) Telephony Adapter Webhooks
+### 3.1 Twilio
+- POST /api/telephony/twilio/events — Twilio webhook for call events
+- POST /api/telephony/twilio/answer — Answer call
+- POST /api/telephony/twilio/hangup — End call
+
+### 3.2 Asterisk
+- POST /api/telephony/asterisk/events — ARI webhook for channel events
+- POST /api/telephony/asterisk/answer — Answer channel
+- POST /api/telephony/asterisk/hangup — End channel
+
+### 3.3 Yeastar
+- POST /api/telephony/yeastar/call — Create session from Yeastar call
+- POST /api/telephony/yeastar/events — Handle Yeastar events (DTMF, speech)
+- POST /api/telephony/yeastar/answer — Mark call as answered
+- POST /api/telephony/yeastar/hangup — End session on hangup

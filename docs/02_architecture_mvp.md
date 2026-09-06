@@ -21,9 +21,9 @@
 - Built-in adapters:
   - SimulatorAdapter (default, web-based UI)
   - TwilioAdapter (Twilio Programmable Voice)
-  - ExotelAdapter (Exotel Cloud Telephony)
-  - SipAdapter (SIP/Asterisk)
-  - GenesysAdapter (Genesys Cloud)
+  - AsteriskAdapter (SIP/Asterisk via ARI)
+  - YeastarAdapter (Yeastar PBX webhook mode)
+  - ExotelAdapter and GenesysAdapter are reserved but not yet implemented
 - Each adapter:
   - Starts/ends sessions
   - Receives user input (text, DTMF, audio ref)
@@ -96,10 +96,11 @@ interface TelephonyAdapter {
 
 ### Adapter Selection
 - Configured via `TELEPHONY_ADAPTER` environment variable
-- Values: `simulator`, `twilio`, `exotel`, `sip`, `asterisk`, `yeastar`, `genesys`
-- Default: `yeastar`
-- The `sip` channel is aliased to the Asterisk adapter for SIP bridge deployments
+- Values: `simulator`, `twilio`, `asterisk`, `yeastar`
+- Default: `simulator` (fallback when no config is loaded)
+- The `sip` session channel is aliased to the Asterisk adapter for SIP bridge deployments
 - Adapters are loaded dynamically based on config
+- Note: `exotel` and `genesys` are reserved channel names but not yet implemented; they resolve to null stubs in the factory and will throw if selected
 
 ### Pilot Rule
 - Build the orchestrator and internal interface now
