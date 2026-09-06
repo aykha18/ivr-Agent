@@ -59,6 +59,41 @@ export default function Simulator() {
     }
   }, [started]);
 
+  useEffect(() => {
+    if (started) return;
+    const stored = localStorage.getItem("session-storage");
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored);
+      const sessionId = parsed?.state?.sessionId;
+      const ended = parsed?.state?.ended;
+      if (sessionId && !ended) {
+        fetch(`/api/sessions/${sessionId}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.session && !data.session.ended_at) {
+              const recoveredMessages: ChatMessage[] = data.turns?.map((turn: any) => ({
+                type: turn.user_text ? "user" : "assistant",
+                text: turn.user_text || turn.assistant_text,
+                timestamp: turn.created_at,
+              })) || [];
+              useSessionStore.setState({
+                sessionId: data.session.session_id,
+                language: data.session.language as LanguageCode | null,
+                languageLocked: !!data.session.language,
+                started: true,
+                ended: false,
+                messages: recoveredMessages,
+              });
+            }
+          })
+          .catch(() => {});
+      }
+    } catch {
+      // ignore corrupt storage
+    }
+  }, [started]);
+
   const handleStart = async () => {
     await startSession(channel);
     const { sessionId: newSessionId } = useSessionStore.getState();
